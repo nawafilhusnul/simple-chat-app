@@ -1,4 +1,5 @@
 const express = require('express');
+const { init } = require('express/lib/application');
 const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -9,17 +10,18 @@ const httpServer = app.listen(PORT, () =>
 
 const io = new Server(httpServer)
 
-app.use(express.static(path.join(__dirname, 'public')))
 let socketsConnected = new Set()
 
-io.on('connection', onConnected)
+io.of('users').on('connection', onConnected)
 
 function onConnected(socket) {
   socketsConnected.add(socket.id)
-  console.log(`connected ${socket.id}`)
-
-  io.emit('clients-total', socketsConnected.size)
-
+  socket.on('init', data => {
+    if (data) {
+      sendChatURLToDriver(socket.id)
+    }
+  })
+  io.of('users').emit('clients-total', socketsConnected.size)
   socket.on('disconnect', () => {
     socketsConnected.delete(socket.id)
     console.log(` disconnected ${socket.id}`)
@@ -27,18 +29,17 @@ function onConnected(socket) {
   })
 
   socket.on('message', (data) => {
-    console.log(data)
     socket.broadcast.emit('chat-message', data)
   })
 
   socket.on('is-typing', (data) => {
-    console.log(data)
     socket.broadcast.emit('is-typing', data)
   })
 }
 
-app.get('/chat/:id', (req, res) => {
-  console.log(req.params.id)
-  res.send('hello world')
-  return
-})
+function sendChatURLToDriver(socketId) {
+  console.log(`http://localhost:4000/to-chat/${socketId}`)
+}
+
+app.use('/', express.static(path.join(__dirname, 'user')))
+app.use('/to-chat/:id', express.static(path.join(__dirname, 'driver')))

@@ -1,11 +1,20 @@
 const socket = io()
-
+const usersSocket = io('/users')
 const clientsTotal = document.getElementById('clients-total')
 const messageContainer = document.getElementById('message-container')
 const nameInput = document.getElementById('name-input')
 const messageForm = document.getElementById('message-form')
 const messageInput = document.getElementById('message-input')
-let sendButton = document.getElementById('send-button')
+const data = {
+  _id: "6454ccfdce7766c9ca78c91a",
+  user_id: "6454ccfd4bb05d6abcebcffc",
+  driver_id: "6454ccfd06b5ff32e08b78e1",
+  role: "user"
+}
+
+if (data.role === "user") {
+  usersSocket.emit('init', data)
+}
 
 messageForm.addEventListener('submit', e => {
   e.preventDefault()
@@ -29,18 +38,17 @@ function sendMessage() {
     dateTime: timeNow.toLocaleString(),
   }
 
-  socket.emit('message', data)
+  usersSocket.emit('message', data)
   addMessageToUI(true, data)
   messageInput.value = ''
 }
 
-socket.on('chat-message', (data) => {
+usersSocket.on('chat-message', (data) => {
   removeIsTypingFeedback()
   addMessageToUI(false, data)
 })
 
 function addMessageToUI(isOwnMessage, data) {
-  console.log(data)
   const element = `
   <li class="${isOwnMessage ? 'message-right' : 'message-left'}">
     <p class="message">
@@ -54,7 +62,6 @@ function addMessageToUI(isOwnMessage, data) {
 }
 
 function addOnTypingToUI(data) {
-  console.log(data)
   const element = `
   <li class="message-feedback">
     <p class="feedback" id="feedback">
@@ -67,14 +74,14 @@ function addOnTypingToUI(data) {
 }
 
 function onTypingFeedback(name) {
-  socket.emit('is-typing', `${name} is typing a message ...`)
+  usersSocket.emit('is-typing', `${name} is typing a message ...`)
 }
 
 function removeIsTypingFeedback() {
   messageContainer.removeChild(messageContainer.lastElementChild)
 }
 
-socket.on('is-typing', (data) => {
+usersSocket.on('is-typing', (data) => {
   addOnTypingToUI(data)
 })
 
